@@ -1,0 +1,46 @@
+#!/bin/sh
+# 20161019 CSC - www.csc.fi - Jopa
+
+# tgztree, a simple script to create "tgz"s by directory in a tree
+# Note: won't include names starting with a dot and can't handle
+#       exotic names like names starting with a dash at all.
+#       Silently skips "tgz"ing if no files in a directory.
+
+# Usage: tgztree [-v] sourcedirectory [destinationdirectory]
+#        -v lists directories while packing
+#        destinationdirectory defaults to sourcedirectory-packed
+
+if [ "$1" = "-v" ]; then OPT_V="Y"; shift; fi
+
+if [ $# -lt 1 -o $# -gt 2 -o "$1" = "." -o "$2" = "." -o "$1" = "$2" ]; then
+	echo "Usage: $0 [-v] sourcedirectory [destinationdirectory]"
+	exit 1
+fi
+
+if [ ! -d "$1" ]; then
+	echo "Not a directory: \"$1\""
+	exit 1
+fi
+
+SOURCE=`echo "$1" | sed 's:/$::'`
+DEST="$SOURCE-packed"
+if [ "$2" != "" ]; then DEST=`echo "$2" | sed 's:/$::'`; fi
+
+if [ ! -d "$DEST" ]; then
+	mkdir "$DEST"
+	if [ $? -ne 0 ]; then echo "Failed to mkdir \"$DEST\""; exit 1; fi
+fi
+
+TARGET=`cd "$DEST";pwd`
+cd `dirname $SOURCE`
+FULLSOURCE=`pwd`
+find `basename $SOURCE` -type d | \
+	while read line; do
+		if [ "$OPT_V" = "Y" ]; then echo "$line"; fi
+		mkdir "$TARGET/$line"
+		cd "$FULLSOURCE/$line"
+		if [ `ls | wc -l` != 0 ]; then
+			tar -cnzf "$TARGET/$line/`basename "$line"`.tgz" *
+		fi
+	done
+
