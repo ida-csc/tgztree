@@ -13,9 +13,16 @@ Usage
 -----
 
 ```
-tgztree [-v] sourcedirectory [destinationdirectory]
-        -v lists directories while packing
-        destinationdirectory defaults to sourcedirectory-packed
+tgztree [-v] [-b size [-d]] sourcedirectory [destinationdirectory]
+       The order of paramaters must be as listed
+       -v list directories while packing
+       -b split result files to the size
+        Linux (GNU split) K, M, G for 1024 based and KB, MB, GB for 1000 based
+          Example: "tgztree -b 500M mydirectory"
+        OSX (old BSD split) k, m for 1024 based kilo and mega
+          Example: "tgztree -b 500m mydirectory"
+       -d split output uses -d option, sequential numbers
+       destinationdirectory defaults to sourcedirectory-packed
 ```
 
 License
