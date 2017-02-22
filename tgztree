@@ -1,19 +1,51 @@
 #!/bin/sh
-# 20161019 CSC - www.csc.fi - Jopa
+# 20170222 CSC - www.csc.fi - Jopa
 
 # tgztree, a simple script to create "tgz"s by directory in a tree
 # Note: won't include names starting with a dot and can't handle
-#       exotic names like names starting with a dash at all.
+#       at all exotic names like names starting with a dash.
 #       Silently skips "tgz"ing if no files in a directory.
 
-# Usage: tgztree [-v] sourcedirectory [destinationdirectory]
-#        -v lists directories while packing
+# Usage: tgztree [-v] [-b size [-d]] sourcedirectory [destinationdirectory]
+#        The order of paramaters must be as listed
+#        -v list directories while packing
+#        -b split result files to the size
+#         Linux (GNU split) K, M, G for 1024 based and KB, MB, GB for 1000 based kilo, mega and giga
+#           Example: "tgztree -b 500M mydirectory"
+#         OSX (old BSD split) k, m for 1024 based kilo and mega
+#           Example: "tgztree -b 500m mydirectory"
+#        -d split output uses -d option, sequential numbers
 #        destinationdirectory defaults to sourcedirectory-packed
 
 if [ "$1" = "-v" ]; then OPT_V="Y"; shift; fi
 
+if [ "$1" = "-b" ]; then
+	OPT_B="Y"
+	SIZE="-b $2"
+	shift; shift
+
+	if [ "$1" = "-d" ]; then
+		OPT_D="Y"
+		NO_NUMS=`split -d </dev/null 2>&1|wc -l`
+		if [ "$NO_NUMS" != "0" ]; then
+			echo "$0: Your split does not support -d option, ignoring it"
+			OPT_D=""
+		fi
+		shift;
+	fi
+fi
+
 if [ $# -lt 1 -o $# -gt 2 -o "$1" = "." -o "$2" = "." -o "$1" = "$2" ]; then
-	echo "Usage: $0 [-v] sourcedirectory [destinationdirectory]"
+	echo "Usage: $0 [-v] [-b size [-d]] sourcedirectory [destinationdirectory]"
+        echo "       The order of paramaters must be as listed"
+        echo "       -v list directories while packing"
+        echo "       -b split result files to the size"
+        echo "        Linux (GNU split) K, M, G for 1024 based and KB, MB, GB for 1000 based"
+        echo "          Example: \"tgztree -b 500M mydirectory\""
+        echo "        OSX (old BSD split) k, m for 1024 based kilo and mega"
+        echo "          Example: \"tgztree -b 500m mydirectory\""
+        echo "       -d split output uses -d option, sequential numbers"
+        echo "       destinationdirectory defaults to sourcedirectory-packed"
 	exit 1
 fi
 
@@ -41,6 +73,16 @@ find `basename $SOURCE` -type d | \
 		cd "$FULLSOURCE/$line"
 		if [ `ls | wc -l` != 0 ]; then
 			tar -cnzf "$TARGET/$line/`basename "$line"`.tgz" *
+			if [ "$OPT_B" = "Y" ]; then
+				( cd "$TARGET/$line"
+				if [ "$OPT_D" = "Y" ]; then
+					split "$SIZE" -d "`basename "$line"`.tgz" "`basename "$line"`.tgz."
+				else
+					split "$SIZE" "`basename "$line"`.tgz" "`basename "$line"`.tgz."
+				fi
+				rm "`basename "$line"`.tgz"
+				)
+			fi
 		fi
 	done
 
